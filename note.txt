@@ -1,0 +1,378 @@
+1. insialisasi project javascsript
+	- yarn init
+
+2. install package yang diperlukan
+	- yarn add express nodemon
+
+3. Membuat server di dalam express js
+	- buat file index js
+		- const express = require('express'); // meng import package
+		- const app = express(); // untuk membuat server
+		- app.listen(4000, () =>  {
+			console.log('Server berhasil di running di port 4000')	
+		}) //menentukan port
+
+4. buat script pada pacakge json untuk running server
+	- "script": "nodemon index.js"
+
+*note: postman adalah tools untuk pembuatan rest api
+	- testing api
+	- provide method http seperti, get, post, put, patch delete
+
+5. basic routing
+	- app.method(path, handler); // pathern
+	- app.use("/", (req, res, next) => {
+		res.send('Hello World');
+})
+
+6. spesific routing
+	- app.get("/", (req, res) => {
+	res.send('Hello Get Method');
+	})
+	- app.post("/", (req, res) => {
+	res.send('Hello Post Method');
+	})
+
+7. response
+	- bisa mengembalikan text
+		- res.send('Hello World'); // tag html, etc
+	*note: // response yang biasa diberikan di dalam rest API berupa JSON
+	- bisa mengembalikan json 
+		- res.json({
+			nama: "Frans Alwan",
+			email: "fransalwan@gmai.com"
+		})
+
+8. Refactor & Project Structure
+	- folder src // untuk seluruh codingan
+		- buat folder routes didalam src // berisi file-file
+		// yang memiliki fungsi routing, ex: ada banyak path:
+		// seperti user, product, sales.
+		/ itu dipisah2kan sesuai routing masing-masing
+		
+		- buat folder controller di dalam src // berisi fungsi
+		// yang kita gunakan pada setiap routes (sebuah handler)
+		// agar kodingan lebih terlihat rapi dan mudah dibaca pada routes
+		
+		- buat folder middleware di dalam src // menyimpan fungsi middleware
+
+		- buat folder models di dalam src // menyimpan fungsi-fungsi call ke database
+		
+		- buat folder config di dalam src// setup ke database
+
+9. middleware
+	- bisa mengakses req, res, next
+	- sebagai penghubung, bisa melakukan authenticate, json webtoken.
+	- contoh middleware:
+		- app.use((req, res, next) => {
+			console.log('log terjadi request ke API ini');
+			next();
+		}) // sebaiknya dijadikan function pada satu file dalam folder middleware
+	- sehingga ketika kita membuat middleware pada file index, akan menjadi seperti berikut:
+		app.use(middlewareLogRequest);
+
+10. Membuat dummy crud - Create
+	- kita butuh input dari user (request body) // dari postman
+	- buat middleware untuk menerima request body berupa json (wajib)
+		- app.use(express.json());
+	- tambahkan res.json pada controller createNewUser
+		res.json({
+			message: 'Create New User success',
+			data: req.body
+	})
+
+11. Read
+	- Membaca atau mengambil data kita
+	- buat data dummy pada controller getAllUser
+		- const data = {
+			id: '1',	
+			name: "Prawito",
+			email: "prawito@gmail.com"
+		}
+		res.json({
+			message: 'Get all users success',
+			data: data
+		})
+	- hit dari postman melalui method get
+
+12. Patch
+	- buat router
+		- router.patch('/:id', UserController.updateUser)
+	- buat controller function
+		- const updateUser = (req, res) => {
+			console.log(req.params);
+			res.json({
+			message: 'Update user success',
+			data: req.body
+			})
+		}
+	- hit dari postman melalui method patch
+		- http://localhost:4000/users/1
+
+13. Delete
+	- buat router
+		- router.delete('/:id', UserController.deleteUser)
+	- buat controller function
+		- const deleteUSer = (req, res) => {
+		const id = req.params;
+		res.json({
+			message: 'Delete User success',
+			data: {
+				id: idUser,
+				name: "Prawito",
+				email: "prawito@gmail.com"	
+			}
+		})
+	}
+	- hit dari postman melalui method delete
+		- http://localhost:4000/users/1
+
+14. Mysql
+	- membuat database baru dan table baru
+		- pada workbench
+			- 1. klik new schema // membuat database
+				- express_mysql
+			- 2. klik kanan pada button table, lalu create table
+				- users
+			- 3. buat column pada table
+				- id(int) = pk, nn, ai
+				- name(varchar 225)
+				- email (varchar 225)
+
+15. Create connection Express to Mysql
+	- 1. install package mysql 2
+		- yarn add mysql2
+	- 2. buka dokumentasi mysql2 
+		- gunakan connection pool
+		* Connection pools help reduce the time spent connecting to 
+		the Mysql server by reusing a previous connction, leaving them
+		open instead of closing when you are done with them
+		- buat connection pool
+			- const mysql = require('mysql2');
+		- buat pool
+			- const dbPool = mysql.createPool({
+				host: 'localhost',
+				user: '',
+				password: '', 
+				database: 'express_mysql',
+			});
+	- coba koneksi
+		- app.use('/', (req, res) => {
+			dbPool.execute('SELECT * FROM users', (err, rows) => {
+				if(err){
+					res.json({
+						message: 'connection failed'
+					})
+				}
+				res.json({
+					message: 'connection success',
+					data: rows,
+				})
+			})
+		})
+	- hit dari postman melalui method get
+
+16. Refactor Mysql Connection
+	- pindahkan mysql(connection pool) dan dbPool ke dalam folder config
+	dengan nama file database.js
+	- untuk pemanggilan query dipindahkan ke dalam folder model
+	dengan nama file users.js dan dijadikan function dan dimasukkan 
+	ke dalam variabel
+		- const getAllUsers = () => {
+			const SQLQuery = 'SELECT * FROM users';
+
+			return dbPool.execute(SQLQuery);
+			// karena tidak langsung menggunakannya, maka tidak butuh
+			callback
+		}
+	- pada controller function ubah dummy data menjadi database
+		- remove dummy
+		- import model
+			const UsersModel = require('../models/users');
+		- masukkan model ke dalam function getAllUsers
+			- const data = await UsersModel.getAllUsers();
+			// default nya akan mengembalikan [rows, fields]
+		- destructuring data
+			- const [data] = await UsersModel.getAllUsers();
+			// maka data yang dikembalikan sesuai yang diharapkan
+	- untuk menangani error saat request data
+		- gunakan function try catch
+			- catch(error) {
+				res.status(500).json({
+					message: 'Server Error',
+					serverMessage: error,
+				})
+			}
+ 
+17. Setup Environment Variable
+	- Untuk Menyimpan data-data yang rahasia yang tidak dapat diakses
+	oleh user
+	- Tahapan nya
+		- download package dotenv
+			- yarn add dotenv
+		- lakukan konfigurasi
+			- require ('dotenv').config();
+		- buat file .env
+			- PORT=4000
+			- DB_HOST=localhost
+			- DB_USERNAME=root
+			- DB_PASSWORD=
+			- DB_NAME=express_mysql
+		- import PORT dengan memasukkannya ke dalam variable pada index
+			- const PORT = process.env.PORT || 5000;
+		- import juga pada database data-data rahasia seperti
+			- process.env.DB_HOST
+			- process.env.DB_USERNAME
+			- process.env.DB_PASSWORD
+			- process.env.DB_NAME
+		*.env tidak masuk kedalam repository tapi bisa jika berupa sample
+			- .env.example
+				- PORT=xxxx
+				- DB_HOST=xxxx
+				- DB_USERNAME=xxxx
+				- DB_PASSWORD=xxxx
+				- DB_NAME=xxxx
+
+18. CRUD to MySQL Database - Create - POST
+	- buat model
+		- const createNewUser = (body) => {
+			const SQLQuery = `INSERT INTO users (name, email, address)
+						VALUES ('${body.name}', '${body.email}', '${body.address}')`
+			
+			return dbPool.execute(SQLQuery);
+		}
+	*model ini akan diterima dari request body
+	- pada controller tangkap request body pada createNewUser
+		- const {body} = req;
+	- lakukan try catch untuk melakukan call ke database agar bisa menangkap error
+		- try {
+			await UsersModel.createNewUser(body);
+			res.json({
+				message: 'Create new user success',
+				data: body
+			})
+		} catch (error) {
+			res.status(500).json({
+				message: 'Server Error',
+				serverMessage: error
+			})
+		} 
+	
+19. Update
+	- buat model
+		- const updateUser = (body, id) => {
+			const SQLQuery = `UPDATE users 
+						SET name='${body.name}', email='${body.email}', address='${body.address}'
+						WHERE id=${id}`;
+
+			return dbPool.execute(SQLQuery);	
+		}
+	- pada controller tangkap request body dan id pada UpdateUser
+		- const {id} = req.params;
+		- const {body} = req;
+	- lakukan try catch untuk melakukan call ke database agar bisa menangkap error
+		- try {
+			await UsersModel.updateUser(body, id);
+			res.json({
+				message: 'Update user success',
+				data: {
+					id: id,
+					...body
+				}
+			})
+		} catch (error) {
+			res.status(500).json({
+				message: 'Server Error',
+				serverMessage: error
+			})
+		} 
+
+19. Delete
+	- buat model
+		- const deleteUser = (idUser) => {
+			const SQLQuery = `DELETE FROM users WHERE id=${id}`;
+
+			return dbPool.execute(SQLQuery);
+		}
+	- pada controller tangkap id pada deleteUser
+		- const {id} = req.params;
+	- lakukan try catch untuk melakukan call ke database agar bisa menangkap error
+		- try {
+			await UsersModel.deleteUser(id);
+			res.json({
+				message: 'Delete user success',
+				data: null
+			})
+		} catch (error) {
+			res.status(500).json({
+				message: 'Server Error',
+				serverMessage: error
+			})
+		}
+
+20. Memahami Status Code pada REST API
+	- Successful Responses (2xx) 
+		- 200 OK (GET, PATCH)
+		- 201 Created (POST, PUT)
+	- Client Error Responses (4xx)
+		- 400 Bad Request = permintaan client tidak cocok dengan server
+		- 401 Unauthorized = client tidak terauthorisasi
+		- 403 Forbidden = client tidak memiliki hak akses
+		- 404 Not Found = client mengkases api yang tidak ada
+		- 405 Method Not Allowed = metod http tidak diizinkan
+	- Server error responses (5xx)
+		- 500 Internal Server Error
+	- informasi ini baik untuk disimpan sebagai pengingat ketika mengembangkan rest api
+		- nama file = http-status-code.md
+	- ubah response setiap method agar sesuai sehingga dapat dipahami client dengan baik
+
+21. Optimalisasi Postman dan Collection
+	- kita bisa memisahkan workspace sesaui kebutuhan kita pada postman
+		- misalnya untuk training, Pribadi, Kantor, Team dll
+	- dan di dalam workspace kita bisa membuat collection untuk menyimpan endpoint yang sudah kita buat
+		- seperti create user, Get All User, Update User, Delete User
+		- dan endpoint tadi bisa kita grouping lagi
+			- misalnya kita masukan ke-empat endpoint tadi dengan nama Users
+	- Hal ini dibuat agar collection ini bisa kita share kepada tim kita agar tampak lebih rapi
+	dan mudah dipahami
+
+22. Membuat Static File di Express
+	- buat middleware
+		- app.use('assets', express.static('public/images'))
+
+23. Mengupload file pada express
+	- download package multer
+		*membantu menghandle multipart form data
+	- buat middleware multer.js
+		- const multer = require('multer');
+	- menentukan tempat menyimpan file yang akan di upload
+		- const storage = multer.diskStorage({
+			destionation: (req, file, cb) => {
+				cb(null, 'public/images')
+			},
+			filename: (req, file, cb) => {
+				const timestamp = new Date().getTime();
+				const originalname = file.originalname;
+
+				cb(null, `${timestamp}-${originalname}`);
+			}
+		})
+
+		const upload = multer({storage: storage})
+	- gunakan middleware spesifik di buat path
+		- app.post('/upload',upload.single('photo') , (req, res) => {
+			res.json({
+				message: 'Upload berhasil'
+			})
+		})
+	- kita bisa memberikan limit untuk mengupload data
+		limits: {
+			fileSize: 3 * 1000 * 1000 // 3MB
+		}
+	- menghandle error dari limit 
+		- buat middleware
+			- app.use((err, req, res, next) => { // ini adalah error handling
+				res.json({
+					message: err.message
+				})
+			})
